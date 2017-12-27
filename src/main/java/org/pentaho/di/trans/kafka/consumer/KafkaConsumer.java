@@ -1,21 +1,27 @@
 package org.pentaho.di.trans.kafka.consumer;
 
-import kafka.consumer.Consumer;
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.KafkaStream;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.row.RowDataUtil;
 import org.pentaho.di.core.row.RowMeta;
 import org.pentaho.di.trans.Trans;
 import org.pentaho.di.trans.TransMeta;
-import org.pentaho.di.trans.step.*;
+import org.pentaho.di.trans.step.BaseStep;
+import org.pentaho.di.trans.step.StepDataInterface;
+import org.pentaho.di.trans.step.StepInterface;
+import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.step.StepMetaInterface;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Collections;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Kafka Consumer step processor
@@ -52,16 +58,15 @@ public class KafkaConsumer extends BaseStep implements StepInterface {
                 logError(Messages.getString("KafkaConsumer.WarnConsumerTimeout"));
             }
         }
-        ConsumerConfig consumerConfig = new ConsumerConfig(substProperties);
 
-        logBasic(Messages.getString("KafkaConsumer.CreateKafkaConsumer.Message", consumerConfig.zkConnect()));
-        data.consumer = Consumer.createJavaConsumerConnector(consumerConfig);
-        Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
+        // We must hard-code these, otherwise the class is not found at runtime.
+        substProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class);
+        substProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+
+        data.consumer = new org.apache.kafka.clients.consumer.KafkaConsumer<Object, Object>(substProperties);
+
         String topic = environmentSubstitute(meta.getTopic());
-        topicCountMap.put(topic, 1);
-        Map<String, List<KafkaStream<byte[], byte[]>>> streamsMap = data.consumer.createMessageStreams(topicCountMap);
-        logDebug("Received streams map: " + streamsMap);
-        data.streamIterator = streamsMap.get(topic).get(0).iterator();
+        data.consumer.subscribe(Collections.singletonList(topic));
 
         return true;
     }
@@ -69,7 +74,7 @@ public class KafkaConsumer extends BaseStep implements StepInterface {
     public void dispose(StepMetaInterface smi, StepDataInterface sdi) {
         KafkaConsumerData data = (KafkaConsumerData) sdi;
         if (data.consumer != null) {
-            data.consumer.shutdown();
+            data.consumer.close();
 
         }
         super.dispose(smi, sdi);
@@ -179,7 +184,7 @@ public class KafkaConsumer extends BaseStep implements StepInterface {
     public void stopRunning(StepMetaInterface smi, StepDataInterface sdi) throws KettleException {
 
         KafkaConsumerData data = (KafkaConsumerData) sdi;
-        data.consumer.shutdown();
+        data.consumer.close();
         data.canceled = true;
 
         super.stopRunning(smi, sdi);

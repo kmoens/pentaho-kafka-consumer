@@ -12,8 +12,8 @@
 		<maven.compiler.target>1.6</maven.compiler.target>
 		<maven.compiler.source>1.6</maven.compiler.source>
 		<kettle.version>7.1.0.0-12</kettle.version>
-		<kafka.scala.version>2.10</kafka.scala.version>
-		<kafka.version>0.8.2.1</kafka.version>
+		<kafka.scala.version>2.11</kafka.scala.version>
+		<kafka.version>1.0.0</kafka.version>
 		<buildId>${maven.build.timestamp}</buildId>
 		<junit.version>4.12</junit.version>
 		<powermock.version>1.6.6</powermock.version>
@@ -23,11 +23,11 @@
 	<repositories>
 		<repository>
 			<id>pentaho-releases</id>
-			<url>http://nexus.pentaho.org/content/groups/omni</url>
+			<url>http://repo.int.cipal.be/nexus/content/repositories/proxy-pentaho/</url>
 		</repository>
     <repository>
       <id>maven-eclipse-repo</id>
-      <url>http://maven-eclipse.github.io/maven</url>
+		<url>http://repo.int.cipal.be/nexus/content/groups/public/</url>
     </repository>
 	</repositories>
 
@@ -50,6 +50,11 @@
 					<artifactId>jms</artifactId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka-streams</artifactId>
+			<version>${kafka.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>pentaho-kettle</groupId>
